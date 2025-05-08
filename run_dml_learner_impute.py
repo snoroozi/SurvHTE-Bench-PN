@@ -5,7 +5,7 @@ import numpy as np
 import pickle
 import time
 from tqdm import tqdm
-from models_causal_impute_meta.direct_learners import CausalForest, DoubleMachineLearning
+from models_causal_impute_meta.dml_learners import CausalForest, DoubleML
 from models_causal_impute_meta.survival_eval_impute import SurvivalEvalImputer
 
 def load_scenario_data(h5_file_path, scenario_num):
@@ -66,7 +66,7 @@ def main(args):
     experiment_repeat_setups = pd.read_csv("synthetic_data/idx_split.csv").set_index("idx")
     random_idx_col_list = experiment_repeat_setups.columns.to_list()[:args.num_repeats]
 
-    output_pickle_path = f"results/{args.direct_learner}_{args.impute_method}_repeats_{args.num_repeats}_train_{args.train_size}.pkl"
+    output_pickle_path = f"results/dml_learner/{args.dml_learner}_{args.impute_method}_repeats_{args.num_repeats}_train_{args.train_size}.pkl"
     print("Output results path:", output_pickle_path)
 
     results_dict = {}
@@ -100,7 +100,7 @@ def main(args):
                     survival_imputer = SurvivalEvalImputer(imputation_method=args.impute_method)
                     _, Y_test_imputed = survival_imputer.fit_transform(Y_train, Y_test, impute_train=False)
 
-                learner_cls = {"causal_forest": CausalForest, "double_machine_learning": DoubleMachineLearning}[args.direct_learner]
+                learner_cls = {"causal_forest": CausalForest, "double_ml": DoubleML}[args.dml_learner]
                 learner = learner_cls()
 
                 learner.fit(X_train, W_train, Y_train_imputed)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_size", type=int, default=5000)
     parser.add_argument("--test_size", type=int, default=5000)
     parser.add_argument("--impute_method", type=str, default="Pseudo_obs", choices=["Pseudo_obs", "Margin", "IPCW-T"])
-    parser.add_argument("--direct_learner", type=str, default="causal_forest", choices=["double_machine_learning", "causal_forest"])
+    parser.add_argument("--dml_learner", type=str, default="causal_forest", choices=["double_ml", "causal_forest"])
     parser.add_argument("--load_imputed", action="store_true")
     parser.add_argument("--imputed_path", type=str, default="synthetic_data/imputed_times_lookup.pkl")
     args = parser.parse_args()

@@ -6,7 +6,7 @@ from econml.sklearn_extensions.linear_model import StatsModelsLinearRegression
 
 class BaseDirectLearner(ABC):
     """
-    Abstract base class for direct causal effect estimators like DML and Causal Forest.
+    Abstract base class for double machine learning causal effect estimators like DoubleML and Causal Forest.
     """
     def __init__(self):
         self.model = None
@@ -29,7 +29,7 @@ class BaseDirectLearner(ABC):
         return mse, cate_pred, ate_pred
     
 
-class DoubleMachineLearning(BaseDirectLearner):
+class DoubleML(BaseDirectLearner):
     """
     Double Machine Learning (Partially Linear) using EconML DML.
     """

@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Usage:
-# ./run_direct_learners_impute.sh t_learner 5000
+# ./run_dml_learners_impute.sh t_learner 5000
 
 # Get arguments or set defaults
-DIRECT_LEARNER=${1:-causal_forest}
+DML_LEARNER=${1:-causal_forest}
 TRAIN_SIZE=${2:-5000}
 
 # Constants
@@ -16,12 +16,12 @@ IMPUTE_METHODS=("Pseudo_obs" "Margin" "IPCW-T")
 # Loop through each method and run
 for METHOD in "${IMPUTE_METHODS[@]}"
 do
-    echo "Running with imputation method: $METHOD, direct-learner: $DIRECT_LEARNER, train size: $TRAIN_SIZE"
+    echo "Running with imputation method: $METHOD, dml-learner: $DML_LEARNER, train size: $TRAIN_SIZE"
     python run_direct_learner_impute.py \
         --num_repeats $REPEATS \
         --train_size $TRAIN_SIZE \
         --test_size $TEST_SIZE \
-        --direct_learner $DIRECT_LEARNER \
+        --dml_learner $DIRECT_LEARNER \
         --impute_method $METHOD \
         --load_imputed \
         --imputed_path $IMPUTED_PATH
