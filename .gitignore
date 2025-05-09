@@ -14,4 +14,4 @@ imputed_times_lookup.pkl
 *.pt
 
 twin_pairs_*_3years_samesex.csv
-models_causal_impute_meta/RISTexample.rmd
+models_causal_impute_meta/RISTexample.rmd*.pkl
