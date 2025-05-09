@@ -8,6 +8,7 @@ from tqdm import tqdm
 from models_causal_impute.dml_learners import CausalForest, DoubleML
 from models_causal_impute.survival_eval_impute import SurvivalEvalImputer
 
+
 def load_scenario_data(h5_file_path, scenario_num):
     key = f"scenario_{scenario_num}/data"
     with pd.HDFStore(h5_file_path, mode='r') as store:
@@ -16,6 +17,26 @@ def load_scenario_data(h5_file_path, scenario_num):
         df = store[key]
         metadata = store.get_storer(key).attrs.metadata
     return {"dataset": df, "metadata": metadata}
+
+
+TRUE_ATE = {('RCT_0_5', 'scenario_1'): 0.124969, ('RCT_0_5', 'scenario_2'): 0.163441, ('RCT_0_5', 'scenario_5'): 0.74996,
+            ('RCT_0_5', 'scenario_8'): 0.7537, ('RCT_0_5', 'scenario_9'): 0.723925,
+            ('RCT_0_05', 'scenario_1'): 0.124969, ('RCT_0_05', 'scenario_2'): 0.163441, ('RCT_0_05', 'scenario_5'): 0.74996,
+            ('RCT_0_05', 'scenario_8'): 0.7537, ('RCT_0_05', 'scenario_9'): 0.723925,
+            ('e_X', 'scenario_1'): 0.124969, ('e_X', 'scenario_2'): 0.163441, ('e_X', 'scenario_5'): 0.74996,
+            ('e_X', 'scenario_8'): 0.7537, ('e_X', 'scenario_9'): 0.723925,
+            ('e_X_U', 'scenario_1'): 0.131728, ('e_X_U', 'scenario_2'): 0.003744, ('e_X_U', 'scenario_5'): 0.74036,
+            ('e_X_U', 'scenario_8'): 0.74032, ('e_X_U', 'scenario_9'): 0.830668,
+            ('e_X_no_overlap', 'scenario_1'): 0.124969, ('e_X_no_overlap', 'scenario_2'): 0.163441, ('e_X_no_overlap', 'scenario_5'): 0.74996,
+            ('e_X_no_overlap', 'scenario_8'): 0.7537, ('e_X_no_overlap', 'scenario_9'): 0.723925,
+            ('e_X_info_censor', 'scenario_1'): 0.124969, ('e_X_info_censor', 'scenario_2'): 0.163441, ('e_X_info_censor', 'scenario_5'): 0.74996,
+            ('e_X_info_censor', 'scenario_8'): 0.7537, ('e_X_info_censor', 'scenario_9'): 0.723925,
+            ('e_X_U_info_censor', 'scenario_1'): 0.131728, ('e_X_U_info_censor', 'scenario_2'): 0.003744, ('e_X_U_info_censor', 'scenario_5'): 0.74036,
+            ('e_X_U_info_censor', 'scenario_8'): 0.74032, ('e_X_U_info_censor', 'scenario_9'): 0.830668,
+            ('e_X_no_overlap_info_censor', 'scenario_1'): 0.124969, ('e_X_no_overlap_info_censor', 'scenario_2'): 0.163441, 
+            ('e_X_no_overlap_info_censor', 'scenario_5'): 0.74996, ('e_X_no_overlap_info_censor', 'scenario_8'): 0.7537, 
+            ('e_X_no_overlap_info_censor', 'scenario_9'): 0.723925}
+
 
 def prepare_data_split(dataset_df, experiment_repeat_setups, random_idx_col_list, num_training_data_points=5000, test_size=5000):
     split_results = {}
@@ -107,13 +128,17 @@ def main(args):
                 learner.fit(X_train, W_train, Y_train_imputed)
                 mse_test, cate_test_pred, ate_test_pred = learner.evaluate(X_test, cate_test_true, W_test)
 
+                ate_true = TRUE_ATE.get((setup_name, scenario_key), cate_test_true.mean())
+
                 results_dict[setup_name][scenario_key][rand_idx] = {
                     "cate_true": cate_test_true,
                     "cate_pred": cate_test_pred,
-                    "ate_true": cate_test_true.mean(),
-                    "ate_pred": ate_test_pred,
+                    "ate_true": ate_true,
+                    "ate_pred": ate_test_pred.mean_point,
                     "cate_mse": mse_test,
-                    "ate_bias": ate_test_pred - cate_test_true.mean(),
+                    "ate_bias": ate_test_pred.mean_point - ate_true,
+                    "ate_interval": ate_test_pred.conf_int_mean(),
+                    "ate_statistics": ate_test_pred,
                 }
 
             end_time = time.time()
@@ -138,11 +163,7 @@ def main(args):
 
             with open(output_pickle_path, "wb") as f:
                 pickle.dump(results_dict, f)
-            # break
-        # break
 
-    # df = summarize_experiment_results(results_dict)
-    # print(df)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

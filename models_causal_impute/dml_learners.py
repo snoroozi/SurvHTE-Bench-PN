@@ -3,13 +3,15 @@ from sklearn.metrics import mean_squared_error
 import numpy as np
 from econml.dml import DML, CausalForestDML
 from econml.sklearn_extensions.linear_model import StatsModelsLinearRegression
+from econml.inference import BootstrapInference
 
 class BaseDirectLearner(ABC):
     """
     Abstract base class for double machine learning causal effect estimators like DoubleML and Causal Forest.
     """
-    def __init__(self):
+    def __init__(self, num_bootstrap_samples=100):
         self.model = None
+        self.num_bootstrap_samples = num_bootstrap_samples
 
     @abstractmethod
     def fit(self, X_train, W_train, Y_train):
@@ -25,7 +27,8 @@ class BaseDirectLearner(ABC):
         """
         cate_pred = self.predict_cate(X)
         mse = mean_squared_error(cate_true, cate_pred)
-        ate_pred = np.mean(cate_pred)
+        # ate_pred = np.mean(cate_pred)
+        ate_pred = self.model.ate_inference(X)
         return mse, cate_pred, ate_pred
     
 
@@ -44,7 +47,8 @@ class DoubleML(BaseDirectLearner):
         )
 
     def fit(self, X_train, W_train, Y_train):
-        self.model.fit(Y_train, W_train, X=X_train)
+        bootstap = BootstrapInference(n_bootstrap_samples=self.num_bootstrap_samples, n_jobs=1)
+        self.model.fit(Y_train, W_train, X=X_train, inference=bootstap)
 
     def predict_cate(self, X):
         return self.model.effect(X)
@@ -64,7 +68,8 @@ class CausalForest(BaseDirectLearner):
         )
 
     def fit(self, X_train, W_train, Y_train):
-        self.model.fit(Y_train, W_train, X=X_train)
+        bootstap = BootstrapInference(n_bootstrap_samples=self.num_bootstrap_samples, n_jobs=1)
+        self.model.fit(Y_train, W_train, X=X_train, inference=bootstap)
 
     def predict_cate(self, X):
         return self.model.effect(X)

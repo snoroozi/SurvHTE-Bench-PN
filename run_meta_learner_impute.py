@@ -5,8 +5,9 @@ import numpy as np
 import pickle
 import time
 from tqdm import tqdm
-from models_causal_impute.meta_learners import TLearner, SLearner, XLearner, DR_Learner
+from models_causal_impute.meta_learners import T_Learner, S_Learner, X_Learner, DR_Learner
 from models_causal_impute.survival_eval_impute import SurvivalEvalImputer
+
 
 def load_scenario_data(h5_file_path, scenario_num):
     key = f"scenario_{scenario_num}/data"
@@ -16,6 +17,26 @@ def load_scenario_data(h5_file_path, scenario_num):
         df = store[key]
         metadata = store.get_storer(key).attrs.metadata
     return {"dataset": df, "metadata": metadata}
+
+
+TRUE_ATE = {('RCT_0_5', 'scenario_1'): 0.124969, ('RCT_0_5', 'scenario_2'): 0.163441, ('RCT_0_5', 'scenario_5'): 0.74996,
+            ('RCT_0_5', 'scenario_8'): 0.7537, ('RCT_0_5', 'scenario_9'): 0.723925,
+            ('RCT_0_05', 'scenario_1'): 0.124969, ('RCT_0_05', 'scenario_2'): 0.163441, ('RCT_0_05', 'scenario_5'): 0.74996,
+            ('RCT_0_05', 'scenario_8'): 0.7537, ('RCT_0_05', 'scenario_9'): 0.723925,
+            ('e_X', 'scenario_1'): 0.124969, ('e_X', 'scenario_2'): 0.163441, ('e_X', 'scenario_5'): 0.74996,
+            ('e_X', 'scenario_8'): 0.7537, ('e_X', 'scenario_9'): 0.723925,
+            ('e_X_U', 'scenario_1'): 0.131728, ('e_X_U', 'scenario_2'): 0.003744, ('e_X_U', 'scenario_5'): 0.74036,
+            ('e_X_U', 'scenario_8'): 0.74032, ('e_X_U', 'scenario_9'): 0.830668,
+            ('e_X_no_overlap', 'scenario_1'): 0.124969, ('e_X_no_overlap', 'scenario_2'): 0.163441, ('e_X_no_overlap', 'scenario_5'): 0.74996,
+            ('e_X_no_overlap', 'scenario_8'): 0.7537, ('e_X_no_overlap', 'scenario_9'): 0.723925,
+            ('e_X_info_censor', 'scenario_1'): 0.124969, ('e_X_info_censor', 'scenario_2'): 0.163441, ('e_X_info_censor', 'scenario_5'): 0.74996,
+            ('e_X_info_censor', 'scenario_8'): 0.7537, ('e_X_info_censor', 'scenario_9'): 0.723925,
+            ('e_X_U_info_censor', 'scenario_1'): 0.131728, ('e_X_U_info_censor', 'scenario_2'): 0.003744, ('e_X_U_info_censor', 'scenario_5'): 0.74036,
+            ('e_X_U_info_censor', 'scenario_8'): 0.74032, ('e_X_U_info_censor', 'scenario_9'): 0.830668,
+            ('e_X_no_overlap_info_censor', 'scenario_1'): 0.124969, ('e_X_no_overlap_info_censor', 'scenario_2'): 0.163441, 
+            ('e_X_no_overlap_info_censor', 'scenario_5'): 0.74996, ('e_X_no_overlap_info_censor', 'scenario_8'): 0.7537, 
+            ('e_X_no_overlap_info_censor', 'scenario_9'): 0.723925}
+
 
 def prepare_data_split(dataset_df, experiment_repeat_setups, random_idx_col_list, num_training_data_points=5000, test_size=5000):
     split_results = {}
@@ -144,11 +165,13 @@ def main(args):
                             print(f"[Warning]: For {args.meta_learner}, No event in control group. Skipping iteration {rand_idx}.")
                             continue
 
-                    learner_cls = {"t_learner": TLearner, "s_learner": SLearner, "x_learner": XLearner, "dr_learner": DR_Learner}[args.meta_learner]
+                    learner_cls = {"t_learner": T_Learner, "s_learner": S_Learner, "x_learner": X_Learner, "dr_learner": DR_Learner}[args.meta_learner]
                     learner = learner_cls(base_model_name=base_model)
 
                     learner.fit(X_train, W_train, Y_train_imputed)
                     mse_test, cate_test_pred, ate_test_pred = learner.evaluate(X_test, cate_test_true, W_test)
+
+                    ate_true = TRUE_ATE.get((setup_name, scenario_key), cate_test_true.mean())
 
                     # Evaluate base survival models on test data
                     base_model_eval = learner.evaluate_test(X_test, Y_test_imputed, W_test)
@@ -156,11 +179,13 @@ def main(args):
                     results_dict[setup_name][scenario_key][base_model][rand_idx] = {
                         "cate_true": cate_test_true,
                         "cate_pred": cate_test_pred,
-                        "ate_true": cate_test_true.mean(),
-                        "ate_pred": ate_test_pred,
+                        "ate_true": ate_true,
+                        "ate_pred": ate_test_pred.mean_point,
                         "cate_mse": mse_test,
-                        "ate_bias": ate_test_pred - cate_test_true.mean(),
+                        "ate_bias": ate_test_pred.mean_point - ate_true,
                         "base_model_eval": base_model_eval, # Store base model evaluation results
+                        "ate_interval": ate_test_pred.conf_int_mean(),
+                        "ate_statistics": ate_test_pred,
                     }
 
                 end_time = time.time()
