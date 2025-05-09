@@ -102,7 +102,6 @@ class T_Learner(BaseMetaLearner):
 
         self.model = TLearner(
             models=underlying_model,
-            random_state=42,
         )
         self.model.fit(Y_train, W_train, X=X_train, inference=bootstap)
 
@@ -145,7 +144,6 @@ class S_Learner(BaseMetaLearner):
 
         self.model = SLearner(
             overall_model=underlying_model,
-            random_state=42,
         )
         self.model.fit(Y_train, W_train, X=X_train, inference=bootstap)
 
@@ -190,7 +188,6 @@ class X_Learner(BaseMetaLearner):
             models=underlying_model,
             # propensity_model=LogisticRegression(),
             cate_models=underlying_model,
-            random_state=42,
         )
         self.model.fit(Y_train, W_train, X=X_train, inference=bootstap)
 
