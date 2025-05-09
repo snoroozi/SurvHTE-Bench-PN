@@ -109,6 +109,8 @@ class T_Learner(BaseMetaLearner):
         return self.model.effect(X)
 
     def evaluate_test(self, X_test, Y_test, W_test):
+
+        self.evaluation_test_dict = {}
         
         treated_eval = {'mae': mean_absolute_error(self.model.models[1].predict(X_test[W_test == 1]), Y_test[W_test == 1]),
                         'r2':  r2_score(self.model.models[1].predict(X_test[W_test == 1]), Y_test[W_test == 1])}
