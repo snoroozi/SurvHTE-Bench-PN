@@ -153,12 +153,14 @@ class S_Learner(BaseMetaLearner):
         return self.model.effect(X)
 
     def evaluate_test(self, X_test, Y_test, W_test):
+
+        self.evaluation_test_dict = {}
         
         # unsure exactly how to augment the treatment variable (selected based on training performance)
         X_aug = np.column_stack((X_test, 1-W_test, W_test)) 
         self.evaluation_test_dict['s'] = {
-            'mae': mean_absolute_error(self.model.predict(X_aug), Y_test),
-            'r2': r2_score(self.model.predict(X_aug), Y_test)
+            'mae': mean_absolute_error(self.model.overall_model.predict(X_aug), Y_test),
+            'r2': r2_score(self.model.overall_model.predict(X_aug), Y_test)
         }
 
         return self.evaluation_test_dict
@@ -197,6 +199,8 @@ class X_Learner(BaseMetaLearner):
         return self.model.effect(X)
 
     def evaluate_test(self, X_test, Y_test, W_test):
+
+        self.evaluation_test_dict = {}
         
         treated_eval = {'mae': mean_absolute_error(self.model.models[1].predict(X_test[W_test == 1]), Y_test[W_test == 1]),
                         'r2':  r2_score(self.model.models[1].predict(X_test[W_test == 1]), Y_test[W_test == 1])}
@@ -206,10 +210,10 @@ class X_Learner(BaseMetaLearner):
                         'r2':  r2_score(self.model.models[0].predict(X_test[W_test == 0]), Y_test[W_test == 0])}
         self.evaluation_test_dict['mu0'] = control_eval
 
-        self.evaluation_test_dict['propensity'] = None # EconML does not expose the trained propensity model
+        # self.evaluation_test_dict['propensity'] = None # EconML does not expose the trained propensity model
 
-        self.evaluation_test_dict['tau0'] = None # EconML does not expose the trained tau0 model
-        self.evaluation_test_dict['tau1'] = None # EconML does not expose the trained tau1 model
+        # self.evaluation_test_dict['tau0'] = None # EconML does not expose the trained tau0 model
+        # self.evaluation_test_dict['tau1'] = None # EconML does not expose the trained tau1 model
 
         return self.evaluation_test_dict
 
