@@ -173,7 +173,7 @@ def main(args):
 
                     ate_true = TRUE_ATE.get((setup_name, scenario_key), cate_test_true.mean())
 
-                    # Evaluate base survival models on test data
+                    # Evaluate base regression models on test data
                     base_model_eval = learner.evaluate_test(X_test, Y_test_imputed, W_test)
 
                     results_dict[setup_name][scenario_key][base_model][rand_idx] = {
