@@ -7,7 +7,7 @@ TRAIN_SIZE=0.75
 
 # Define the imputation methods to loop over
 IMPUTE_METHODS=("Pseudo_obs" "Margin" "IPCW-T")
-META_LEARNERs=("t_learner" "s_learner" "x_learner")
+META_LEARNERs=("t_learner" "s_learner" "x_learner" "dr_learner")
 
 # Loop through each method and run the Python script
 for METHOD in "${IMPUTE_METHODS[@]}"

@@ -5,10 +5,14 @@ import numpy as np
 import pickle
 import time
 from tqdm import tqdm
-from models_causal_impute.meta_learners import TLearner, SLearner, XLearner
+from models_causal_impute.meta_learners import T_Learner, S_Learner, X_Learner, DR_Learner
 from models_causal_impute.survival_eval_impute import SurvivalEvalImputer
 
 NUM_REPEATS_TO_INCLUDE = 10
+
+TRUE_ATE = {('ACTG_175_HIV1', 'scenario_1'): 2.7977461375268904,
+            ('ACTG_175_HIV2', 'scenario_1'): 2.603510045518606,
+            ('ACTG_175_HIV3', 'scenario_1'): 2.051686700212568}
 
 def prepare_actg_data_split(dataset_df, X_cols, W_col, cate_base_col, experiment_repeat_setup):
     split_results = {}
@@ -105,7 +109,8 @@ def main(args):
         experiment_setups[base_name] = scenario_dict
 
 
-    output_pickle_path = f"results/actg_{args.meta_learner}_{args.impute_method}_repeats_{args.num_repeats}.pkl"
+    output_pickle_path = f"results/real_data/models_causal_impute/meta_learner/{args.meta_learner}/"
+    output_pickle_path += f"actg_{args.meta_learner}_{args.impute_method}_repeats_{args.num_repeats}.pkl"
     print("Output results path:", output_pickle_path)
 
     # base_regressors = ['ridge', 'lasso', 'rf', 'gbr', 'xgb']
@@ -144,24 +149,57 @@ def main(args):
                     if Y_test_imputed is None:
                         survival_imputer = SurvivalEvalImputer(imputation_method=args.impute_method)
                         _, Y_test_imputed = survival_imputer.fit_transform(Y_train, Y_test, impute_train=False)
+                    
+                    if args.meta_learner in ["t_learner", "x_learner"]:
+                        if Y_train[W_train == 1, 1].sum() <= 1:
+                            print(f"[Warning]: For {args.meta_learner}, No event in treatment group. Skipping iteration {rand_idx}.")
+                            continue
+                        if Y_train[W_train == 0, 1].sum() <= 1:
+                            print(f"[Warning]: For {args.meta_learner}, No event in control group. Skipping iteration {rand_idx}.")
+                            continue
 
-                    learner_cls = {"t_learner": TLearner, "s_learner": SLearner, "x_learner": XLearner}[args.meta_learner]
+                    learner_cls = {"t_learner": T_Learner, "s_learner": S_Learner, "x_learner": X_Learner, "dr_learner": DR_Learner}[args.meta_learner]
                     learner = learner_cls(base_model_name=base_model)
 
                     learner.fit(X_train, W_train, Y_train_imputed)
                     mse_test, cate_test_pred, ate_test_pred = learner.evaluate(X_test, cate_test_true, W_test)
 
+                    ate_true = TRUE_ATE.get((setup_name, scenario_key))
+
+                    # Evaluate base regression models on test data
+                    base_model_eval = learner.evaluate_test(X_test, Y_test_imputed, W_test)
+
                     results_dict[setup_name][scenario_key][base_model][rand_idx] = {
                         "cate_true": cate_test_true,
                         "cate_pred": cate_test_pred,
-                        "ate_true": cate_test_true.mean(),
-                        "ate_pred": ate_test_pred,
+                        "ate_true": ate_true,
+                        "ate_pred": ate_test_pred.mean_point,
                         "cate_mse": mse_test,
-                        "ate_bias": ate_test_pred - cate_test_true.mean()
+                        "ate_bias": ate_test_pred.mean_point - ate_true,
+                        "base_model_eval": base_model_eval, # Store base model evaluation results
+                        "ate_interval": ate_test_pred.conf_int_mean(),
+                        "ate_statistics": ate_test_pred,
                     }
 
                 end_time = time.time()
+                
+                if len(results_dict[setup_name][scenario_key][base_model]) == 0:
+                    print(f"[Warning]: No valid results for {setup_name}, {scenario_key}, {base_model}. Skipping.")
+                    continue
+
                 avg = results_dict[setup_name][scenario_key][base_model]
+                base_model_eval_performance = {
+                                                base_model_k: 
+                                                {
+                                                    f"{stat}_{metric_j}": func([
+                                                        avg[i]['base_model_eval'][base_model_k][metric_j] for i in range(NUM_REPEATS_TO_INCLUDE)
+                                                        if i in avg
+                                                    ])
+                                                    for metric_j in metric_j_dict
+                                                    for stat, func in zip(['mean', 'std'], [np.nanmean, np.nanstd])
+                                                }
+                                                for base_model_k, metric_j_dict in avg[list(avg.keys())[0]]['base_model_eval'].items()
+                                            }
                 results_dict[setup_name][scenario_key][base_model]["average"] = {
                     "mean_cate_mse": np.mean([avg[i]["cate_mse"] for i in range(NUM_REPEATS_TO_INCLUDE)]),
                     "std_cate_mse": np.std([avg[i]["cate_mse"] for i in range(NUM_REPEATS_TO_INCLUDE)]),
@@ -171,7 +209,8 @@ def main(args):
                     "std_ate_true": np.std([avg[i]["ate_true"] for i in range(NUM_REPEATS_TO_INCLUDE)]),
                     "mean_ate_bias": np.mean([avg[i]["ate_bias"] for i in range(NUM_REPEATS_TO_INCLUDE)]),
                     "std_ate_bias": np.std([avg[i]["ate_bias"] for i in range(NUM_REPEATS_TO_INCLUDE)]),
-                    "runtime": (end_time - start_time) / len(range(NUM_REPEATS_TO_INCLUDE))
+                    "runtime": (end_time - start_time) / len(range(NUM_REPEATS_TO_INCLUDE)),
+                    "base_model_eval": base_model_eval_performance
                 }
 
             with open(output_pickle_path, "wb") as f:
@@ -187,7 +226,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_repeats", type=int, default=10)
     parser.add_argument("--train_size", type=float, default='0.75')
     parser.add_argument("--impute_method", type=str, default="Pseudo_obs", choices=["Pseudo_obs", "Margin", "IPCW-T"])
-    parser.add_argument("--meta_learner", type=str, default="t_learner", choices=["t_learner", "s_learner", "x_learner"])
+    parser.add_argument("--meta_learner", type=str, default="t_learner", choices=["t_learner", "s_learner", "x_learner", "dr_learner"])
     parser.add_argument("--load_imputed", action="store_true")
     parser.add_argument("--imputed_path", type=str, default="real_data/imputed_times_lookup.pkl")
     args = parser.parse_args()
