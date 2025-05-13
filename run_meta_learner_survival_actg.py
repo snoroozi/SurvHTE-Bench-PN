@@ -11,6 +11,10 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 NUM_REPEATS_TO_INCLUDE = 10
 
+TRUE_ATE = {('ACTG_175_HIV1', 'scenario_1'): 2.7977461375268904,
+            ('ACTG_175_HIV2', 'scenario_1'): 2.603510045518606,
+            ('ACTG_175_HIV3', 'scenario_1'): 2.051686700212568}
+
 def prepare_actg_data_split(dataset_df, X_cols, W_col, cate_base_col, experiment_repeat_setup):
     split_results = {}
     length = len(experiment_repeat_setup)
@@ -71,7 +75,8 @@ def main(args):
                 scenario_dict[f"scenario_{scenario}"] = result
         experiment_setups[base_name] = scenario_dict
 
-    output_pickle_path = f"results/actg_{args.meta_learner}_{args.base_survival_model}_{args.survival_metric}_repeats_{args.num_repeats}.pkl"
+    output_pickle_path = f"results/real_data/models_causal_survival_meta/{args.meta_learner}/"
+    output_pickle_path += f"{args.meta_learner}_{args.base_survival_model}_repeats_{args.num_repeats}.pkl"
     print("Output results path:", output_pickle_path)
 
     # Define base survival models to use
@@ -149,6 +154,8 @@ def main(args):
 
                 # Fit the learner
                 learner.fit(X_train, W_train, Y_train)
+
+                ate_true = TRUE_ATE.get((setup_name, scenario_key), cate_test_true.mean())
                 
                 # Evaluate base survival models on test data
                 base_model_eval = learner.evaluate_test(X_test, Y_test, W_test)
@@ -159,10 +166,10 @@ def main(args):
                 results_dict[setup_name][scenario_key][rand_idx] = {
                     "cate_true": cate_test_true,
                     "cate_pred": cate_test_pred,
-                    "ate_true": cate_test_true.mean(),
+                    "ate_true": ate_true,
                     "ate_pred": ate_test_pred,
                     "cate_mse": mse_test,
-                    "ate_bias": ate_test_pred - cate_test_true.mean(),
+                    "ate_bias": ate_test_pred - ate_true,
                     "base_model_eval": base_model_eval  # Store base model evaluation results
                 }
 
