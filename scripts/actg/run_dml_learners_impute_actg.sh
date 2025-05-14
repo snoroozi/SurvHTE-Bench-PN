@@ -4,7 +4,8 @@
 # ./scripts/run_dml_learners_impute.sh double_ml 5000
 
 # Get arguments or set defaults
-DML_LEARNER=${1:-causal_forest}
+# DML_LEARNER=${1:-causal_forest}
+DML_LEARNER="double_ml"
 
 # Constants
 REPEATS=10
