@@ -38,7 +38,7 @@ class CausalSurvivalForestGRF:
     def _make_failure_time_grid(self, Y_time):
         return np.linspace(Y_time.min(), Y_time.max(), num=self.failure_times_grid_size)
 
-    def fit(self, X_train, W_train, Y_train):
+    def fit(self, X_train, W_train, Y_train, failure_times_grid=None):
         """
         Y_train: np.array of shape (n, 2), where
             Y_train[:, 0] = event times
@@ -57,7 +57,8 @@ class CausalSurvivalForestGRF:
             self.horizon = float(Y_time.max())
 
         # Create a grid of failure times
-        failure_times_grid = self._make_failure_time_grid(Y_time)
+        if failure_times_grid is None:
+            failure_times_grid = self._make_failure_time_grid(Y_time)
         failure_times_r = self._to_r_float_vector(failure_times_grid)
 
         if self.seed is None:
