@@ -176,7 +176,7 @@ python run_dml_learner_impute_actg.py --num_repeats 10 --train_size 0.75 --dml_l
 ```
 
 ## Saved Imputations
-The previously ran imputation of the synthetic data is available at [imputed_times_lookup.pkl](https://drive.google.com/file/d/18LyjPWb-SOz2QmCinHGOlyzgiMGNp-WL). This file should be placed in `synthetic_data` directory.
+The previously ran imputation of the synthetic data is available at [imputed_times_lookup.pkl](https://drive.google.com/file/d/18LyjPWb-SOz2QmCinHGOlyzgiMGNp-WL). This file should be placed in `synthetic_data/` directory.
 
 ## Result Analysis
 
