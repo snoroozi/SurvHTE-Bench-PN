@@ -61,7 +61,8 @@ def main(args):
     for path in store_files:
         base_name = os.path.splitext(os.path.basename(path))[0]
         scenario_dict = {}
-        for scenario in range(1, 11):
+        # for scenario in range(1, 11):
+        for scenario in ['A', 'B', 'C', 'D', 'E']:
             result = load_scenario_data(path, scenario)
             if result is not None:
                 scenario_dict[f"scenario_{scenario}"] = result
