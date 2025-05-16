@@ -10,33 +10,33 @@ from models_causal_impute.survival_eval_impute import SurvivalEvalImputer
 
 
 NUM_REPEATS_TO_INCLUDE = 10
-TRAIN_SIZE = 0.5
-VAL_SIZE = 0.25
-TEST_SIZE = 0.25
 
-TRUE_ATE = {('twin', 'scenario_1'): 5.038157894736842,
-            ('twin30', 'scenario_1'): 0.32824561403508773,
-            ('twin180', 'scenario_1'): 2.260438596491228}
+TRUE_ATE = {('ACTG_175_HIV1', 'scenario_1'): 2.7977461375268904,
+            ('ACTG_175_HIV2', 'scenario_1'): 2.603510045518606,
+            ('ACTG_175_HIV3', 'scenario_1'): 2.051686700212568}
 
-def prepare_twin_data_split(dataset_df, X_cols, W_col, cate_base_col, experiment_repeat_setup):
+def prepare_actg_data_split(dataset_df, X_cols, W_col, cate_base_col, experiment_repeat_setup):
     split_results = {}
     length = len(experiment_repeat_setup)
     
     for rand_idx in range(NUM_REPEATS_TO_INCLUDE):
-        y_cols = ['observed_time', 'event']
+        # y_cols = [f't{rand_idx}', f'e{rand_idx}']
+        y_cols = ['observed_time_month', 'effect_non_censor']
         # take the first half of the dataset for training and the second half for testing
-        train_ids = experiment_repeat_setup[f'random_idx{rand_idx}'][:int(length*TRAIN_SIZE)].values
-        test_ids =  experiment_repeat_setup[f'random_idx{rand_idx}'][int(length*TRAIN_SIZE):].values # this includes both validation and test data
+        train_ids = experiment_repeat_setup[f'random_idx{rand_idx}'][:int(length*args.train_size)].values
+        test_ids =  experiment_repeat_setup[f'random_idx{rand_idx}'][int(length*args.train_size):].values
+        # test_ids = dataset_df['id'] # same as train_ids
+        # train_ids = dataset_df['id']
         
-        train_df = dataset_df[dataset_df['idx'].isin(train_ids)]
-        test_df = dataset_df[dataset_df['idx'].isin(test_ids)]
+        train_df = dataset_df[dataset_df['id'].isin(train_ids)]
+        test_df = dataset_df[dataset_df['id'].isin(test_ids)]
 
         X_train = train_df[X_cols].to_numpy()
-        W_train = train_df[W_col].to_numpy().flatten()
+        W_train = train_df[W_col].to_numpy()
         Y_train = train_df[y_cols].to_numpy()
 
         X_test = test_df[X_cols].to_numpy()
-        W_test = test_df[W_col].to_numpy().flatten()
+        W_test = test_df[W_col].to_numpy()
         Y_test = test_df[y_cols].to_numpy()
 
         cate_test_true = test_df[cate_base_col].to_numpy()
@@ -48,30 +48,28 @@ def prepare_twin_data_split(dataset_df, X_cols, W_col, cate_base_col, experiment
 def main(args):
     # Load experiment setups
     store_files = [
-        "real_data/twin.csv",
-        "real_data/twin30.csv",
-        "real_data/twin180.csv",
+        "real_data/ACTG_175_HIV1.csv",
+        "real_data/ACTG_175_HIV2.csv",
+        "real_data/ACTG_175_HIV3.csv",
     ]
 
-    X_binary_cols = ['anemia', 'cardiac', 'lung', 'diabetes', 'herpes', 'hydra',
-        'hemo', 'chyper', 'phyper', 'eclamp', 'incervix', 'pre4000', 'preterm',
-        'renal', 'rh', 'uterine', 'othermr', 
-        'gestat', 'dmage', 'dmeduc', 'dmar', 'nprevist', 'adequacy']
-    X_num_cols = ['dtotord', 'cigar', 'drink', 'wtgain']
-    X_ohe_cols = ['pldel_2', 'pldel_3', 'pldel_4', 'pldel_5', 'resstatb_2', 'resstatb_3', 'resstatb_4', 
-                'mpcb_1', 'mpcb_2', 'mpcb_3', 'mpcb_4', 'mpcb_5', 'mpcb_6', 'mpcb_7', 'mpcb_8', 'mpcb_9']
+    X_bi_cols = ['gender', 'race', 'hemo', 'homo', 'drugs', 'str2', 'symptom']
+    X_cont_cols = ['age', 'wtkg',  'karnof', 'cd40', 'cd80']
+    U = ['z30']
+    W = ['trt']
+    y_cols = ['observed_time_month', 'effect_non_censor'] # ['time', 'cid']
 
-    X_cols = X_binary_cols + X_num_cols + X_ohe_cols
-    W_col = ['W']
-    cate_true_col = 'true_cate'
-    experiment_repeat_setups = [pd.read_csv(f'real_data/idx_split_twin.csv')]
+    X_cols = X_bi_cols + X_cont_cols
+    W_col = W[0]
+    cate_base_col = 'cate_base'
+    experiment_repeat_setups = [pd.read_csv(f'real_data/idx_split_HIV{i}.csv') for i in range(1, 4)]
 
 
     experiment_setups = {}
     for path in store_files:
         base_name = os.path.splitext(os.path.basename(path))[0]
         scenario_dict = {}
-        for scenario in range(1, 2): # only one scenario per twin data
+        for scenario in range(1, 2): # only one scenario per HIV data
             try:
                 result = pd.read_csv(path)
                 if result is not None:
@@ -82,26 +80,18 @@ def main(args):
         experiment_setups[base_name] = scenario_dict
     
     output_pickle_path = f"results/real_data/models_causal_impute/dml_learner/{args.dml_learner}/"
-    output_pickle_path += f"twin_{args.dml_learner}_{args.impute_method}_repeats_{args.num_repeats}.pkl"
+    output_pickle_path += f"actgL_{args.dml_learner}_{args.impute_method}_repeats_{args.num_repeats}.pkl"
     print("Output results path:", output_pickle_path)
 
-    if os.path.exists(output_pickle_path):
-        print(f"Pickle file already exists. Loading from {output_pickle_path}...")
-        with open(output_pickle_path, "rb") as f:
-            results_dict = pickle.load(f)
-    else:
-        results_dict = {}
+    results_dict = {}
 
     for setup_name, setup_dict in tqdm(experiment_setups.items(), desc="Experiment Setups"):
-        if setup_name in results_dict:
-            print(f"Skipping setup {setup_name} as it already exists in results.")
-            continue
         results_dict[setup_name] = {}
-        experiment_repeat_setup = experiment_repeat_setups[0]
+        hiv_dataset_idx = int(setup_name[-1])
+        experiment_repeat_setup = experiment_repeat_setups[hiv_dataset_idx-1]
         for scenario_key in tqdm(setup_dict, desc=f"{setup_name} Scenarios"):
             dataset_df = setup_dict[scenario_key]
-            split_dict = prepare_twin_data_split(dataset_df, X_cols, W_col, cate_true_col, 
-                                             experiment_repeat_setup)
+            split_dict = prepare_actg_data_split(dataset_df, X_cols, W_col, cate_base_col, experiment_repeat_setup)
             results_dict[setup_name][scenario_key] = {}
 
             start_time = time.time()
@@ -126,23 +116,13 @@ def main(args):
                     survival_imputer = SurvivalEvalImputer(imputation_method=args.impute_method)
                     _, Y_test_imputed = survival_imputer.fit_transform(Y_train, Y_test, impute_train=False)
 
-                # take first half of test set as validation set
-                X_val, W_val, Y_val = X_test[:int(len(dataset_df)*VAL_SIZE)], W_test[:int(len(dataset_df)*VAL_SIZE)], Y_test[:int(len(dataset_df)*VAL_SIZE)]
-                cate_val_true = cate_test_true[:int(len(dataset_df)*VAL_SIZE)]
-                X_test, W_test, Y_test = X_test[int(len(dataset_df)*VAL_SIZE):], W_test[int(len(dataset_df)*VAL_SIZE):], Y_test[int(len(dataset_df)*VAL_SIZE):]
-                cate_test_true = cate_test_true[int(len(dataset_df)*VAL_SIZE):]
-                Y_val_imputed = Y_test_imputed[:int(len(dataset_df)*VAL_SIZE)]
-                Y_test_imputed = Y_test_imputed[int(len(dataset_df)*VAL_SIZE):]
-
                 learner_cls = {"causal_forest": CausalForest, "double_ml": DoubleML}[args.dml_learner]
                 learner = learner_cls()
 
                 learner.fit(X_train, W_train, Y_train_imputed)
                 mse_test, cate_test_pred, ate_test_pred = learner.evaluate(X_test, cate_test_true, W_test)
-                mse_val, cate_val_pred, ate_val_pred = learner.evaluate(X_val, cate_val_true, W_val)
 
                 ate_true = TRUE_ATE.get((setup_name, scenario_key), cate_test_true.mean())
-                ate_true_val = TRUE_ATE.get((setup_name, scenario_key), cate_val_true.mean())
 
                 results_dict[setup_name][scenario_key][rand_idx] = {
                     "cate_true": cate_test_true,
@@ -153,15 +133,6 @@ def main(args):
                     "ate_bias": ate_test_pred.mean_point - ate_true,
                     "ate_interval": ate_test_pred.conf_int_mean(),
                     "ate_statistics": ate_test_pred,
-
-                    "cate_true_val": cate_val_true,
-                    "cate_pred_val": cate_val_pred,
-                    "ate_true_val": ate_true_val,
-                    "ate_pred_val": ate_val_pred.mean_point,
-                    "cate_mse_val": mse_val,
-                    "ate_bias_val": ate_val_pred.mean_point - ate_true_val,
-                    "ate_interval_val": ate_val_pred.conf_int_mean(),
-                    "ate_statistics_val": ate_val_pred,
                 }
 
             end_time = time.time()
@@ -181,17 +152,6 @@ def main(args):
                 "std_ate_true": np.std([avg[i]["ate_true"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
                 "mean_ate_bias": np.mean([avg[i]["ate_bias"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
                 "std_ate_bias": np.std([avg[i]["ate_bias"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                
-                # val set:
-                "mean_cate_mse_val": np.mean([avg[i]["cate_mse_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                "std_cate_mse_val": np.std([avg[i]["cate_mse_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                "mean_ate_pred_val": np.mean([avg[i]["ate_pred_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                "std_ate_pred_val": np.std([avg[i]["ate_pred_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                "mean_ate_true_val": np.mean([avg[i]["ate_true_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                "std_ate_true_val": np.std([avg[i]["ate_true_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                "mean_ate_bias_val": np.mean([avg[i]["ate_bias_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                "std_ate_bias_val": np.std([avg[i]["ate_bias_val"] for i in range(NUM_REPEATS_TO_INCLUDE) if i in avg]),
-                
                 "runtime": (end_time - start_time) / len(avg) if len(avg) > 0 else 0,
             }
 
@@ -202,10 +162,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_repeats", type=int, default=10)
-    parser.add_argument("--train_size", type=float, default='0.5')
+    parser.add_argument("--train_size", type=float, default='0.75')
     parser.add_argument("--impute_method", type=str, default="Pseudo_obs", choices=["Pseudo_obs", "Margin", "IPCW-T"])
     parser.add_argument("--dml_learner", type=str, default="causal_forest", choices=["double_ml", "causal_forest"])
     parser.add_argument("--load_imputed", action="store_true")
-    parser.add_argument("--imputed_path", type=str, default="real_data/imputed_times_lookup_twin.pkl")
+    parser.add_argument("--imputed_path", type=str, default="real_data/imputed_times_lookup_actgL.pkl")
     args = parser.parse_args()
     main(args)
