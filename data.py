@@ -32,8 +32,10 @@ class SyntheticDataGeneratorPlus:
         info_censor_alpha: float
             alpha in the rate
         '''
-        assert 1 <= scenario <= 10, "Scenario must be 1-10"
-        self.scenario = scenario
+        
+        self.scenario_alphabetical = scenario
+        self.scenario = self.map_scenario(self.scenario_alphabetical)
+        assert 1 <= self.scenario <= 10, "Scenario mapped must be 1-10" # 1-10 refer to Meir et al. (2025)
         self.n = n_samples
         self.p = n_features
         self.random_state = random_state
@@ -48,7 +50,7 @@ class SyntheticDataGeneratorPlus:
         np.random.seed(self.random_state)
         self._meta = {
             'dataset_name': self.dataset_name,
-            'scenario': self.scenario,
+            'scenario': self.scenario_alphabetical,
             'n_samples': self.n,
             'n_features': self.p,
             'RCT': self.rct,
@@ -57,6 +59,20 @@ class SyntheticDataGeneratorPlus:
             'informative_censoring': self.informative_censoring,
             'random_state': self.random_state,
         }
+
+    def map_scenario(self, scenario):
+        if  scenario == 'A':
+            return 2
+        elif scenario == 'B':
+            return 1
+        elif scenario == 'C':
+            return 5
+        elif scenario == 'D':
+            return 9
+        elif scenario == 'E':
+            return 8
+        else:
+            raise ValueError("Unsupported scenario")
 
     def _simulate_cox(self, linpred, baseline, params):
         """
