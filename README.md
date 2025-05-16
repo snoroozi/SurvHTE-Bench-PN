@@ -186,4 +186,4 @@ The results of experiments are saved as pickle files in the `results/` directory
 
 * This code builds on several open-source packages including EconML, scikit-survival, and PyCox
 * The ACTG 175 clinical trial data is provided by the AIDS Clinical Trials Group
-* The Twin mortality data is derived from the Twin birth registry
+* The Twin mortality data is derived from the Twin birth registry of NBER (Subset obtained from [GANITE](https://github.com/YorkNishi999/ganite_pytorch/blob/main/data/Twin_data.csv.gz))
