@@ -19,23 +19,23 @@ def load_scenario_data(h5_file_path, scenario_num):
     return {"dataset": df, "metadata": metadata}
 
 
-TRUE_ATE = {('RCT_0_5', 'scenario_1'): 0.124969, ('RCT_0_5', 'scenario_2'): 0.163441, ('RCT_0_5', 'scenario_5'): 0.74996,
-            ('RCT_0_5', 'scenario_8'): 0.7537, ('RCT_0_5', 'scenario_9'): 0.723925,
-            ('RCT_0_05', 'scenario_1'): 0.124969, ('RCT_0_05', 'scenario_2'): 0.163441, ('RCT_0_05', 'scenario_5'): 0.74996,
-            ('RCT_0_05', 'scenario_8'): 0.7537, ('RCT_0_05', 'scenario_9'): 0.723925,
-            ('e_X', 'scenario_1'): 0.124969, ('e_X', 'scenario_2'): 0.163441, ('e_X', 'scenario_5'): 0.74996,
-            ('e_X', 'scenario_8'): 0.7537, ('e_X', 'scenario_9'): 0.723925,
-            ('e_X_U', 'scenario_1'): 0.131728, ('e_X_U', 'scenario_2'): 0.003744, ('e_X_U', 'scenario_5'): 0.74036,
-            ('e_X_U', 'scenario_8'): 0.74032, ('e_X_U', 'scenario_9'): 0.830668,
-            ('e_X_no_overlap', 'scenario_1'): 0.124969, ('e_X_no_overlap', 'scenario_2'): 0.163441, ('e_X_no_overlap', 'scenario_5'): 0.74996,
-            ('e_X_no_overlap', 'scenario_8'): 0.7537, ('e_X_no_overlap', 'scenario_9'): 0.723925,
-            ('e_X_info_censor', 'scenario_1'): 0.124969, ('e_X_info_censor', 'scenario_2'): 0.163441, ('e_X_info_censor', 'scenario_5'): 0.74996,
-            ('e_X_info_censor', 'scenario_8'): 0.7537, ('e_X_info_censor', 'scenario_9'): 0.723925,
-            ('e_X_U_info_censor', 'scenario_1'): 0.131728, ('e_X_U_info_censor', 'scenario_2'): 0.003744, ('e_X_U_info_censor', 'scenario_5'): 0.74036,
-            ('e_X_U_info_censor', 'scenario_8'): 0.74032, ('e_X_U_info_censor', 'scenario_9'): 0.830668,
-            ('e_X_no_overlap_info_censor', 'scenario_1'): 0.124969, ('e_X_no_overlap_info_censor', 'scenario_2'): 0.163441, 
-            ('e_X_no_overlap_info_censor', 'scenario_5'): 0.74996, ('e_X_no_overlap_info_censor', 'scenario_8'): 0.7537, 
-            ('e_X_no_overlap_info_censor', 'scenario_9'): 0.723925}
+TRUE_ATE = {('RCT_0_5', 'scenario_B'): 0.124969, ('RCT_0_5', 'scenario_A'): 0.163441, ('RCT_0_5', 'scenario_C'): 0.74996,
+            ('RCT_0_5', 'scenario_E'): 0.7537, ('RCT_0_5', 'scenario_D'): 0.723925,
+            ('RCT_0_05', 'scenario_B'): 0.124969, ('RCT_0_05', 'scenario_A'): 0.163441, ('RCT_0_05', 'scenario_C'): 0.74996,
+            ('RCT_0_05', 'scenario_E'): 0.7537, ('RCT_0_05', 'scenario_D'): 0.723925,
+            ('e_X', 'scenario_B'): 0.124969, ('e_X', 'scenario_A'): 0.163441, ('e_X', 'scenario_C'): 0.74996,
+            ('e_X', 'scenario_E'): 0.7537, ('e_X', 'scenario_D'): 0.723925,
+            ('e_X_U', 'scenario_B'): 0.131728, ('e_X_U', 'scenario_A'): 0.003744, ('e_X_U', 'scenario_C'): 0.74036,
+            ('e_X_U', 'scenario_E'): 0.74032, ('e_X_U', 'scenario_D'): 0.830668,
+            ('e_X_no_overlap', 'scenario_B'): 0.124969, ('e_X_no_overlap', 'scenario_A'): 0.163441, ('e_X_no_overlap', 'scenario_C'): 0.74996,
+            ('e_X_no_overlap', 'scenario_E'): 0.7537, ('e_X_no_overlap', 'scenario_D'): 0.723925,
+            ('e_X_info_censor', 'scenario_B'): 0.124969, ('e_X_info_censor', 'scenario_A'): 0.163441, ('e_X_info_censor', 'scenario_C'): 0.74996,
+            ('e_X_info_censor', 'scenario_E'): 0.7537, ('e_X_info_censor', 'scenario_D'): 0.723925,
+            ('e_X_U_info_censor', 'scenario_B'): 0.131728, ('e_X_U_info_censor', 'scenario_A'): 0.003744, ('e_X_U_info_censor', 'scenario_C'): 0.74036,
+            ('e_X_U_info_censor', 'scenario_E'): 0.74032, ('e_X_U_info_censor', 'scenario_D'): 0.830668,
+            ('e_X_no_overlap_info_censor', 'scenario_B'): 0.124969, ('e_X_no_overlap_info_censor', 'scenario_A'): 0.163441, 
+            ('e_X_no_overlap_info_censor', 'scenario_C'): 0.74996, ('e_X_no_overlap_info_censor', 'scenario_E'): 0.7537, 
+            ('e_X_no_overlap_info_censor', 'scenario_D'): 0.723925}
 
 
 def prepare_data_split(dataset_df, experiment_repeat_setups, random_idx_col_list, num_training_data_points=5000, test_size=5000):
@@ -78,7 +78,8 @@ def main(args):
     for path in store_files:
         base_name = os.path.splitext(os.path.basename(path))[0]
         scenario_dict = {}
-        for scenario in range(1, 11):
+        # for scenario in range(1, 11):
+        for scenario in ['A', 'B', 'C', 'D', 'E']:
             result = load_scenario_data(path, scenario)
             if result is not None:
                 scenario_dict[f"scenario_{scenario}"] = result
