@@ -17,3 +17,6 @@ real_data/Twin_data.csv
 twin_pairs_*_3years_samesex.csv
 models_causal_impute_meta/RISTexample.rmd*.pkl
 *.pkl
+
+
+results_updated/
