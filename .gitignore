@@ -20,3 +20,7 @@ models_causal_impute_meta/RISTexample.rmd*.pkl
 
 
 results_updated/
+
+
+notebooks/figure_results/
+notebooks/figure_results_updated/
